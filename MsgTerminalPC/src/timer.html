@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f172a;
+    font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #e2e8f0;
+  }
+
+  .header {
+    background: #1e293b;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+  .header h1 { font-size: 16px; color: #e2e8f0; font-weight: 700; }
+  .header-btns { margin-left: auto; display: flex; gap: 6px; -webkit-app-region: no-drag; }
+  .header-btn {
+    width: 30px; height: 30px; border: none; border-radius: 6px;
+    background: rgba(255,255,255,0.06); color: #94a3b8;
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .header-btn:hover { background: rgba(255,255,255,0.12); color: #e2e8f0; }
+
+  .tabs {
+    display: flex;
+    padding: 6px 16px 0;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+  .page {
+    flex: 1; display: none; flex-direction: column;
+    padding: 12px 16px 16px;
+    overflow: hidden;
+  }
+  .page.active { display: flex; }
+
+  /* 正计时页面：上下均分 */
+  #pageStopwatch {
+    justify-content: space-evenly;
+    align-items: center;
+  }
+
+  /* 倒计时页面 */
+  #pageCountdown {
+    justify-content: space-between;
+    gap: 0;
+    padding: 16px 16px 20px;
+  }
+  #pageCountdown.running {
+    justify-content: space-evenly;
+    align-items: center;
+  }
+  .page.active { display: flex; }
+
+  /* 正计时页面：上下均分 */
+  #pageStopwatch {
+    justify-content: space-evenly;
+    align-items: center;
+  }
+
+  .time-display {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    color: #f0f0f0;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(59,130,246,0.3);
+    width: 100%;
+    line-height: 1.1;
+    flex-shrink: 0;
+  }
+  .time-display.running { color: #3b82f6; text-shadow: 0 0 30px rgba(59,130,246,0.5); }
+  .time-display.paused { color: #f59e0b; text-shadow: 0 0 30px rgba(245,158,11,0.4); }
+  .time-display.finished {
+    color: #ef4444; text-shadow: 0 0 30px rgba(239,68,68,0.5);
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .btn-row { display: flex; gap: 10px; flex-shrink: 0; }
+  .btn {
+    padding: 9px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+  }
+  .btn-start:hover { transform: translateY(-1px); }
+  .btn-pause { background: #f59e0b; color: #0f172a; }
+  .btn-pause:hover { background: #d97706; }
+  .btn-reset { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+  .btn-reset:hover { background: #334155; color: #e2e8f0; }
+  .btn-stop-sound {
+    background: rgba(239,68,68,0.2); color: #f87171;
+    border: 1px solid rgba(239,68,68,0.3);
+    display: none;
+  }
+  .btn-stop-sound:hover { background: rgba(239,68,68,0.3); }
+
+  /* 倒计时页面 */
+  #pageCountdown {
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  .cd-time-wrap {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 4px 0 8px;
+  }
+
+  .progress-bar {
+    width: 100%; height: 4px;
+    background: #1e293b; border-radius: 2px;
+    margin-bottom: 10px; overflow: hidden;
+    flex-shrink: 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius: 2px;
+    transition: width 0.3s linear;
+    width: 0%;
+  }
+
+  .countdown-set {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .cd-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .cd-input {
+    width: 80px;
+    padding: 6px 4px;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    font-size: 25px;
+    font-weight: 700;
+    color: #e2e8f0;
+    background: #1e293b;
+    text-align: center;
+    outline: none;
+    font-family: 'Orbitron', monospace;
+    transition: border-color 0.2s;
+  }
+  .cd-input:focus { border-color: #3b82f6; }
+  .cd-label { font-size: 14px; color: #64748b; margin-top: 3px; font-weight: 600; }
+  .cd-sep { font-size: 30px; color: #475569; font-weight: 900; padding-top: 6px; }
+
+  .preset-row {
+    display: flex; gap: 6px; margin-bottom: 8px;
+    flex-wrap: wrap; justify-content: center;
+    flex-shrink: 0;
+  }
+  .preset {
+    padding: 6px 16px;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    background: #1e293b;
+    color: #94a3b8;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset:hover { border-color: #3b82f6; color: #3b82f6; background: #0f172a; }
+
+  .sound-label {
+    font-size: 15px; color: #64748b; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .sound-toggle {
+    position: relative; width: 38px; height: 21px; display: inline-block;
+  }
+  .sound-toggle input { opacity: 0; width: 0; height: 0; }
+  .sound-toggle .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #334155; border-radius: 21px; transition: all 0.2s;
+  }
+  .sound-toggle .slider::before {
+    content: ''; position: absolute; width: 15px; height: 15px;
+    left: 3px; bottom: 3px; background: #fff; border-radius: 50%;
+    transition: all 0.2s;
+  }
+  .sound-toggle input:checked + .slider { background: #3b82f6; }
+  .sound-toggle input:checked + .slider::before { transform: translateX(17px); }
+
+  .cd-btn-row {
+    display: flex; gap: 8px; flex-shrink: 0;
+    padding-top: 4px;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>计时器</h1>
+  <div class="header-btns">
+    <button class="header-btn" id="btnMin">─</button>
+    <button class="header-btn" id="btnClose">✕</button>
+  </div>
+</div>
+<div class="tabs">
+  <button class="tab active" id="tabStopwatch">正计时</button>
+  <button class="tab" id="tabCountdown">倒计时</button>
+</div>
+
+<div class="page active" id="pageStopwatch">
+  <div class="time-display" id="swDisplay">00:00:00</div>
+  <div class="btn-row">
+    <button class="btn btn-start" id="swStart">开始</button>
+    <button class="btn btn-pause" id="swPause" style="display:none;">暂停</button>
+    <button class="btn btn-reset" id="swReset">重置</button>
+  </div>
+</div>
+
+<div class="page" id="pageCountdown">
+  <div class="cd-time-wrap">
+    <div class="time-display" id="cdDisplay">00:05:00</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="cdProgress"></div></div>
+  <div class="countdown-set" id="cdSettings">
+    <div class="cd-unit">
+      <input type="number" class="cd-input" id="cdH" value="0" min="0" max="99">
+      <div class="cd-label">时</div>
+    </div>
+    <span class="cd-sep">:</span>
+    <div class="cd-unit">
+      <input type="number" class="cd-input" id="cdM" value="5" min="0" max="59">
+      <div class="cd-label">分</div>
+    </div>
+    <span class="cd-sep">:</span>
+    <div class="cd-unit">
+      <input type="number" class="cd-input" id="cdS" value="0" min="0" max="59">
+      <div class="cd-label">秒</div>
+    </div>
+  </div>
+  <div class="preset-row" id="cdPresets">
+    <button class="preset" data-s="60">1分钟</button>
+    <button class="preset" data-s="300">5分钟</button>
+    <button class="preset" data-s="600">10分钟</button>
+    <button class="preset" data-s="900">15分钟</button>
+    <button class="preset" data-s="1800">30分钟</button>
+  </div>
+  <div class="sound-label">
+    <span>结束提示音</span>
+    <label class="sound-toggle">
+      <input type="checkbox" id="soundEnabled" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="cd-btn-row">
+    <button class="btn btn-start" id="cdStart">开始</button>
+    <button class="btn btn-pause" id="cdPause" style="display:none;">暂停</button>
+    <button class="btn btn-stop-sound" id="cdStopSound">停止铃声</button>
+    <button class="btn btn-reset" id="cdReset">重置</button>
+  </div>
+</div>
+
+<script>
+  // ========== 自适应字号 ==========
+  function resizeTimeDisplays() {
+    var displays = document.querySelectorAll('.time-display');
+    for (var i = 0; i < displays.length; i++) {
+      var el = displays[i];
+      var isCountdown = el.id === 'cdDisplay';
+      if (isCountdown) {
+        var ww = window.innerWidth;
+        var fs = Math.floor(ww * 0.15);
+        fs = Math.max(40, Math.min(fs, ww - 40));
+        el.style.fontSize = fs + 'px';
+        el.style.letterSpacing = Math.floor(fs * 0.04) + 'px';
+      } else {
+        var parent = el.parentElement;
+        var pw = parent.clientWidth - 20;
+        var ph = parent.clientHeight - 10;
+        var fs2 = Math.min(Math.floor(pw / 6.2), Math.floor(ph * 0.9));
+        fs2 = Math.max(20, Math.min(80, fs2));
+        el.style.fontSize = fs2 + 'px';
+        el.style.letterSpacing = Math.floor(fs2 * 0.05) + 'px';
+      }
+    }
+  }
+  window.addEventListener('resize', resizeTimeDisplays);
+  setTimeout(resizeTimeDisplays, 50);
+
+  // ========== Tab ==========
+  var tabSw = document.getElementById('tabStopwatch');
+  var tabCd = document.getElementById('tabCountdown');
+  var pageSw = document.getElementById('pageStopwatch');
+  var pageCd = document.getElementById('pageCountdown');
+
+  function switchTab(idx) {
+    tabSw.classList.toggle('active', idx === 0);
+    tabCd.classList.toggle('active', idx === 1);
+    pageSw.classList.toggle('active', idx === 0);
+    pageCd.classList.toggle('active', idx === 1);
+    setTimeout(resizeTimeDisplays, 10);
+  }
+  tabSw.addEventListener('click', function() { switchTab(0); });
+  tabCd.addEventListener('click', function() { switchTab(1); });
+
+  // ========== 音效 ==========
+  var audioCtx = null;
+  var alarmInterval = null;
+  var isAlarming = false;
+
+  function createAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playBeep(freq, duration, vol) {
+    var ctx = createAudioCtx();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  function playAlarm() {
+    if (!document.getElementById('soundEnabled').checked) return;
+    isAlarming = true;
+    document.getElementById('cdStopSound').style.display = 'inline-block';
+    playBeep(880, 0.3, 0.4);
+    setTimeout(function() { if (isAlarming) playBeep(880, 0.3, 0.4); }, 400);
+    setTimeout(function() { if (isAlarming) playBeep(1100, 0.5, 0.5); }, 800);
+    alarmInterval = setInterval(function() {
+      if (!isAlarming) return;
+      playBeep(880, 0.3, 0.4);
+      setTimeout(function() { if (isAlarming) playBeep(880, 0.3, 0.4); }, 400);
+      setTimeout(function() { if (isAlarming) playBeep(1100, 0.5, 0.5); }, 800);
+    }, 1500);
+  }
+
+  function stopAlarm() {
+    isAlarming = false;
+    if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+    document.getElementById('cdStopSound').style.display = 'none';
+  }
+
+  document.getElementById('cdStopSound').addEventListener('click', stopAlarm);
+
+  // ========== 正计时 ==========
+  var swInterval = null;
+  var swElapsed = 0;
+  var swStartTs = 0;
+  var swDisplay = document.getElementById('swDisplay');
+
+  function fmtTime(ms) {
+    if (ms < 0) ms = 0;
+    var total = Math.floor(ms / 1000);
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function swUpdate() {
+    swDisplay.textContent = fmtTime(swElapsed + (Date.now() - swStartTs));
+  }
+
+  document.getElementById('swStart').addEventListener('click', function() {
+    swStartTs = Date.now();
+    swInterval = setInterval(swUpdate, 100);
+    swDisplay.className = 'time-display running';
+    document.getElementById('swStart').style.display = 'none';
+    document.getElementById('swPause').style.display = '';
+  });
+
+  document.getElementById('swPause').addEventListener('click', function() {
+    clearInterval(swInterval);
+    swElapsed += Date.now() - swStartTs;
+    swDisplay.className = 'time-display paused';
+    document.getElementById('swPause').style.display = 'none';
+    document.getElementById('swStart').style.display = '';
+    document.getElementById('swStart').textContent = '继续';
+  });
+
+  document.getElementById('swReset').addEventListener('click', function() {
+    clearInterval(swInterval);
+    swElapsed = 0;
+    swDisplay.textContent = '00:00:00';
+    swDisplay.className = 'time-display';
+    document.getElementById('swPause').style.display = 'none';
+    document.getElementById('swStart').style.display = '';
+    document.getElementById('swStart').textContent = '开始';
+  });
+
+  // ========== 倒计时 ==========
+  var cdInterval = null;
+  var cdTotal = 0;
+  var cdRemain = 0;
+  var cdStartTs = 0;
+  var cdDisplay = document.getElementById('cdDisplay');
+  var cdProgress = document.getElementById('cdProgress');
+
+  function getCdMs() {
+    var h = parseInt(document.getElementById('cdH').value) || 0;
+    var m = parseInt(document.getElementById('cdM').value) || 0;
+    var s = parseInt(document.getElementById('cdS').value) || 0;
+    return h * 3600000 + m * 60000 + s * 1000;
+  }
+
+  function setCdInputs(ms) {
+    var total = Math.floor(ms / 1000);
+    document.getElementById('cdH').value = Math.floor(total / 3600);
+    document.getElementById('cdM').value = Math.floor((total % 3600) / 60);
+    document.getElementById('cdS').value = total % 60;
+  }
+
+  function cdUpdate() {
+    var elapsed = Date.now() - cdStartTs;
+    var remain = cdRemain - elapsed;
+    if (remain <= 0) {
+      clearInterval(cdInterval);
+      cdDisplay.textContent = '00:00:00';
+      cdDisplay.className = 'time-display finished';
+      document.getElementById('cdPause').style.display = 'none';
+      document.getElementById('cdStart').style.display = '';
+      document.getElementById('cdStart').textContent = '开始';
+      playAlarm();
+      return;
+    }
+    cdDisplay.textContent = fmtTime(remain);
+  }
+
+  document.getElementById('cdStart').addEventListener('click', function() {
+    stopAlarm();
+    if (cdRemain <= 0) {
+      cdTotal = getCdMs();
+      if (cdTotal <= 0) return;
+      cdRemain = cdTotal;
+    }
+    cdStartTs = Date.now();
+    cdInterval = setInterval(cdUpdate, 100);
+    cdDisplay.className = 'time-display running';
+    document.getElementById('cdSettings').style.display = 'none';
+    document.getElementById('cdPresets').style.display = 'none';
+    document.getElementById('cdProgress').parentElement.style.display = 'none';
+    document.querySelector('.sound-label').style.display = 'none';
+    document.getElementById('cdStart').style.display = 'none';
+    document.getElementById('cdPause').style.display = '';
+    document.getElementById('pageCountdown').classList.add('running');
+  });
+
+  document.getElementById('cdPause').addEventListener('click', function() {
+    clearInterval(cdInterval);
+    cdRemain -= (Date.now() - cdStartTs);
+    cdDisplay.className = 'time-display paused';
+    document.getElementById('cdPause').style.display = 'none';
+    document.getElementById('cdStart').style.display = '';
+    document.getElementById('cdStart').textContent = '继续';
+  });
+
+  document.getElementById('cdReset').addEventListener('click', function() {
+    stopAlarm();
+    clearInterval(cdInterval);
+    cdRemain = 0;
+    cdDisplay.textContent = fmtTime(getCdMs());
+    cdDisplay.className = 'time-display';
+    document.getElementById('cdSettings').style.display = '';
+    document.getElementById('cdPresets').style.display = '';
+    document.getElementById('cdProgress').parentElement.style.display = '';
+    document.querySelector('.sound-label').style.display = '';
+    document.getElementById('cdPause').style.display = 'none';
+    document.getElementById('cdStart').style.display = '';
+    document.getElementById('cdStart').textContent = '开始';
+    document.getElementById('pageCountdown').classList.remove('running');
+    setTimeout(resizeTimeDisplays, 10);
+  });
+
+  document.querySelectorAll('.preset').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setCdInputs(parseInt(this.dataset.s) * 1000);
+      cdDisplay.textContent = fmtTime(parseInt(this.dataset.s) * 1000);
+    });
+  });
+  ['cdH', 'cdM', 'cdS'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.addEventListener('input', function() {
+      if (this.value === '' || parseInt(this.value) < 0) this.value = '0';
+      if (parseInt(this.value) > 59 && this.id !== 'cdH') this.value = '59';
+      if (parseInt(this.value) > 99 && this.id === 'cdH') this.value = '99';
+      if (cdRemain <= 0) cdDisplay.textContent = fmtTime(getCdMs());
+    });
+    el.addEventListener('blur', function() {
+      if (this.value === '' || isNaN(parseInt(this.value))) this.value = '0';
+    });
+  });
+  document.getElementById('btnMin').addEventListener('click', function() { window.api.minimizeTimer(); });
+  document.getElementById('btnClose').addEventListener('click', function() {
+    stopAlarm();
+    window.api.closeTimer();
+  });
+</script>
+</body>
+</html>

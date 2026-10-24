@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  }
+  #app { width: 100%; height: 100%; }
+  .item {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--r, 12px);
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.04);
+    padding: 0 var(--pad, 14px);
+  }
+  .item.cur {
+    background: rgba(59,130,246,0.32);
+    box-shadow: 0 0 14px rgba(59,130,246,0.5);
+  }
+  /* 字号由主进程统一下发（--fs），所有节次完全一致；当前课只改颜色/背景 */
+  .txt {
+    font-size: var(--fs, 22px);
+    font-weight: 500;
+    line-height: 1;
+    color: #1e293b;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      0 0 5px rgba(255,255,255,0.4),
+      1px 1px 0 rgba(255,255,255,0.85),
+      -1px -1px 0 rgba(255,255,255,0.85),
+      1px -1px 0 rgba(255,255,255,0.85),
+      -1px 1px 0 rgba(255,255,255,0.85);
+  }
+  .txt.cur { color: #0f172a; }
+  .txt.empty { color: #64748b; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+  var container = document.getElementById('app')
+  var idx = 0
+  var fs = 22
+  var h = 54
+  try {
+    var q = new URLSearchParams(location.search)
+    idx = parseInt(q.get('i') || '0', 10) || 0
+    if (q.get('fs')) fs = parseFloat(q.get('fs')) || 22
+    if (q.get('h')) h = parseFloat(q.get('h')) || 54
+  } catch (e) {}
+  // 圆角与内边距按字号/行高等比推导，保证不同分辨率下观感一致
+  document.documentElement.style.setProperty('--fs', fs + 'px')
+  document.documentElement.style.setProperty('--pad', Math.max(8, Math.round(fs * 0.7)) + 'px')
+  document.documentElement.style.setProperty('--r', Math.max(6, Math.round(h * 0.22)) + 'px')
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n }
+  function nowHM() { var d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) }
+  function todayIdx() { var d = new Date(); return (d.getDay() + 6) % 7 }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]
+    })
+  }
+
+  // 兜底：万一主进程估算的宽度仍略窄，按 1px 步长收字号，避免出现 “第1…” 这种省略号
+  function fitText(span) {
+    var box = span.parentNode
+    var cs = getComputedStyle(box)
+    var innerW = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    var size = fs
+    var guard = 0
+    while (span.scrollWidth > innerW - 1 && size > fs * 0.75 && guard < 12) {
+      size -= 1
+      span.style.fontSize = size + 'px'
+      guard++
+    }
+  }
+
+  // 返回当前高亮的节次下标（-1 表示今天课程已全部结束）
+  // 策略：正在上的课高亮；这节课一下课，马上高亮下一节，直到下一节结束
+  function computeCurrent(data) {
+    if (!data || !data.sections) return -1
+    var hm = nowHM()
+    for (var i = 0; i < data.sections.length; i++) {
+      var e = data.sections[i].end
+      if (e && hm < e) return i
+    }
+    return -1
+  }
+
+  function render() {
+    Promise.all([window.api.loadSchedule(), window.api.getConfig()]).then(function (res) {
+      var data = res[0]
+      var secs = (data && data.sections) || [], grid = (data && data.grid) || []
+      if (idx >= secs.length) { container.innerHTML = ''; return }
+      var sec = secs[idx]
+      var ti = todayIdx()
+      var c = String((grid[idx] || [])[ti] || '').trim()
+      var cur = computeCurrent(data) === idx
+      var label = sec.name + (c ? ' ' + c : '')
+      var cls = 'txt' + (cur ? ' cur' : '') + (c ? '' : ' empty')
+      container.innerHTML = '<div class="item' + (cur ? ' cur' : '') + '"><span class="' + cls + '">' + esc(label) + '</span></div>'
+      var span = container.querySelector('.txt')
+      if (span) fitText(span)
+    }).catch(function () { container.innerHTML = '' })
+  }
+
+  render()
+  setInterval(render, 30000) // 每 30 秒重新计算当前课并刷新
+  if (window.api.onScheduleRefresh) {
+    window.api.onScheduleRefresh(function () { render() }) // 导入后主进程推送刷新
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: transparent;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    user-select: none;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 挂件不吃鼠标事件，桌面图标点击/框选不受影响 */
+  }
+  .clock-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .clock-frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 32px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.04);
+    position: relative;
+  }
+  .status-dot {
+    position: absolute;
+    top: 11px;
+    left: 13px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #94a3b8;
+    transition: background 0.3s;
+    box-shadow: 0 0 4px rgba(0,0,0,0.1);
+  }
+  .status-dot.online {
+    background: #00e676;
+    box-shadow: 0 0 8px rgba(0,230,118,0.75);
+  }
+  .status-dot.offline {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239,68,68,0.5);
+  }
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .time-digit {
+    font-family: 'Orbitron', monospace;
+    font-size: 80px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1;
+    min-width: 56px;
+    text-align: center;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.6);
+    text-shadow:
+      0 0 4px rgba(255,255,255,0.8),
+      0 0 8px rgba(255,255,255,0.4),
+      0 0 16px rgba(255,255,255,0.2),
+      0 2px 4px rgba(0,0,0,0.06);
+  }
+  .time-colon {
+    font-family: 'Orbitron', monospace;
+    font-size: 72px;
+    font-weight: 400;
+    color: #94a3b8;
+    line-height: 1;
+    margin: 0 2px;
+    animation: blink 1s step-end infinite;
+    -webkit-text-stroke: 0.5px rgba(255,255,255,0.4);
+    text-shadow: 0 0 6px rgba(255,255,255,0.3);
+  }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .time-ampm {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #3b82f6;
+    letter-spacing: 2px;
+    margin-left: 12px;
+    align-self: flex-start;
+    margin-top: 8px;
+    -webkit-text-stroke: 0.3px rgba(255,255,255,0.5);
+    text-shadow: 0 0 6px rgba(59,130,246,0.4);
+  }
+  .divider {
+    width: 240px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148,163,184,0.25), transparent);
+    margin: 18px 0 14px;
+  }
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .date-text {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 19px;
+    color: #334155;
+    letter-spacing: 3px;
+    font-weight: 500;
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      0 0 5px rgba(255,255,255,0.4),
+      1px 1px 0 rgba(255,255,255,0.85),
+      -1px -1px 0 rgba(255,255,255,0.85),
+      1px -1px 0 rgba(255,255,255,0.85),
+      -1px 1px 0 rgba(255,255,255,0.85);
+  }
+  .date-sep {
+    width: 1px;
+    height: 14px;
+    background: rgba(148,163,184,0.25);
+  }
+  .weekday-text {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 18px;
+    color: #2563eb;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      0 0 5px rgba(255,255,255,0.4),
+      1px 1px 0 rgba(255,255,255,0.85),
+      -1px -1px 0 rgba(255,255,255,0.85),
+      1px -1px 0 rgba(255,255,255,0.85),
+      -1px 1px 0 rgba(255,255,255,0.85);
+  }
+  .seconds-row {
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .seconds-bar {
+    width: 200px;
+    height: 3px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .seconds-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
+</style>
+</head>
+<body>
+<div class="clock-wrap">
+  <div class="clock-frame">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="time-row">
+      <span class="time-digit" id="h1">0</span>
+      <span class="time-digit" id="h2">0</span>
+      <span class="time-colon">:</span>
+      <span class="time-digit" id="m1">0</span>
+      <span class="time-digit" id="m2">0</span>
+      <span class="time-ampm" id="ampm"></span>
+    </div>
+    <div class="seconds-row">
+      <div class="seconds-bar">
+        <div class="seconds-fill" id="secondsFill"></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="date-row">
+      <span class="date-text" id="dateText">2026年01月01日</span>
+      <div class="date-sep"></div>
+      <span class="weekday-text" id="weekText">星期一</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateClock() {
+    var now = new Date();
+    var h = now.getHours();
+    var m = now.getMinutes();
+    var s = now.getSeconds();
+    var hStr = String(h).padStart(2, '0');
+    var mStr = String(m).padStart(2, '0');
+    document.getElementById('h1').textContent = hStr[0];
+    document.getElementById('h2').textContent = hStr[1];
+    document.getElementById('m1').textContent = mStr[0];
+    document.getElementById('m2').textContent = mStr[1];
+    var ampm = h < 12 ? 'AM' : 'PM';
+    document.getElementById('ampm').textContent = ampm;
+    var pct = (s / 59) * 100;
+    document.getElementById('secondsFill').style.width = pct + '%';
+    var year = now.getFullYear();
+    var month = String(now.getMonth() + 1).padStart(2, '0');
+    var day = String(now.getDate()).padStart(2, '0');
+    var weeks = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+    document.getElementById('dateText').textContent = year + '年' + month + '月' + day + '日';
+    document.getElementById('weekText').textContent = weeks[now.getDay()];
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  if (window.api && window.api.onConnectionStatus) {
+    window.api.onConnectionStatus(function(connected) {
+      var dot = document.getElementById('statusDot');
+      dot.className = 'status-dot ' + (connected ? 'online' : 'offline');
+    });
+  }
+
+</script>
+</body>
+</html>

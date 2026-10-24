@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #app {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px;
+  }
+  .title {
+    color: #e2e8f0; font-size: 18px; font-weight: 800;
+    margin-bottom: 10px; letter-spacing: 1px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+  /* ===== 整周模式：中央表格（尺寸用 em，渲染后按窗口自动缩放字号） ===== */
+  .tbl {
+    border-collapse: collapse;
+    background: rgba(15,23,42,0.82);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    font-size: 14px;
+  }
+  .tbl th, .tbl td {
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 0.5em 0.7em; text-align: center;
+    color: #e2e8f0; font-size: 1em;
+    min-width: 5.6em; max-width: 9em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tbl th { background: rgba(30,41,59,0.95); font-size: 0.93em; font-weight: 700; color: #93c5fd; }
+  .tbl .corner { background: rgba(30,41,59,0.95); }
+  .tbl .today { color: #fbbf24; }
+  .tbl .coltoday { background: rgba(251,191,36,0.10); }
+  .tbl .sec { background: rgba(30,41,59,0.6); font-weight: 700; font-size: 0.86em; }
+  .tbl .sec .tm { display: block; font-size: 0.72em; color: #94a3b8; font-weight: 400; margin-top: 0.15em; }
+  .tbl td.hot {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #ffffff; font-weight: 800; font-size: 1.12em;
+    box-shadow: 0 0 16px rgba(59,130,246,0.6) inset;
+  }
+  /* ===== 当天模式：右侧竖排（与时钟同款毛玻璃背景） ===== */
+  .dayframe {
+    width: 100%; height: 100%;
+    box-sizing: border-box;
+    padding: 18px 12px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.04);
+    display: flex; flex-direction: column;
+    justify-content: center; gap: 7px;
+  }
+  .dayhead {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 17px; font-weight: 700; color: #2563eb;
+    letter-spacing: 4px; text-align: center; margin-bottom: 4px;
+    -webkit-text-stroke: 0.3px rgba(255,255,255,0.5);
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      0 0 5px rgba(255,255,255,0.4),
+      1px 1px 0 rgba(255,255,255,0.85),
+      -1px -1px 0 rgba(255,255,255,0.85),
+      1px -1px 0 rgba(255,255,255,0.85),
+      -1px 1px 0 rgba(255,255,255,0.85);
+  }
+  .dayline {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 15px; font-weight: 500; color: #1e293b;
+    letter-spacing: 1px; padding: 6px 10px; border-radius: 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      0 0 5px rgba(255,255,255,0.4),
+      1px 1px 0 rgba(255,255,255,0.85),
+      -1px -1px 0 rgba(255,255,255,0.85),
+      1px -1px 0 rgba(255,255,255,0.85),
+      -1px 1px 0 rgba(255,255,255,0.85);
+  }
+  .dayline.cur {
+    background: rgba(59,130,246,0.32);
+    color: #0f172a; font-weight: 800;
+    box-shadow: 0 0 12px rgba(59,130,246,0.45);
+  }
+  .empty {
+    color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.8;
+    background: rgba(15,23,42,0.7); padding: 20px; border-radius: 12px;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+  var container = document.getElementById('app')
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n }
+  function nowHM() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()) }
+  function todayIdx() { var d = new Date(); return (d.getDay() + 6) % 7 } // 周一=0 ... 周日=6
+  function dayName(i) { return ['周一','周二','周三','周四','周五','周六','周日'][i] }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function(m) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m]
+    })
+  }
+
+  // 返回当前高亮的节次下标（-1 表示今天课程已全部结束）
+  // 策略：正在上的课高亮；这节课一下课，马上高亮下一节，直到下一节结束
+  function computeCurrent(data) {
+    if (!data || !data.sections) return -1
+    var hm = nowHM()
+    for (var i = 0; i < data.sections.length; i++) {
+      var e = data.sections[i].end
+      if (e && hm < e) return i
+    }
+    return -1
+  }
+
+  function render() {
+    Promise.all([window.api.loadSchedule(), window.api.getConfig()]).then(function(res) {
+      var data = res[0], cfg = res[1] || {}
+      var mode = cfg.scheduleMode === 'day' ? 'day' : 'week'
+      var showWeekend = cfg.scheduleShowWeekend !== false
+      var ti = todayIdx(), cur = computeCurrent(data)
+      if (mode === 'week') renderWeek(data, ti, cur, showWeekend)
+      else renderDay(data, ti, cur)
+    }).catch(function() {
+      container.innerHTML = '<div class="empty">课程表加载失败</div>'
+    })
+  }
+
+  function renderWeek(data, ti, cur, showWeekend) {
+    var secs = (data && data.sections) || [], grid = (data && data.grid) || []
+    if (secs.length === 0) {
+      container.innerHTML = '<div class="empty">暂无课程表<br>请在「设置 → 课程表」导入 Excel</div>'
+      return
+    }
+    var nDays = showWeekend === false ? 5 : 7
+    var html = '<div class="title">本周课程表</div><table class="tbl">'
+    html += '<tr><th class="corner">节次</th>'
+    for (var d = 0; d < nDays; d++) html += '<th' + (d === ti ? ' class="today"' : '') + '>' + dayName(d) + '</th>'
+    html += '</tr>'
+    for (var i = 0; i < secs.length; i++) {
+      html += '<tr>'
+      html += '<td class="sec' + (i === cur ? ' cur' : '') + '">' + esc(secs[i].name) +
+        (secs[i].start ? '<span class="tm">' + secs[i].start + '-' + secs[i].end + '</span>' : '') + '</td>'
+      var c = grid[i] || []
+      for (var d = 0; d < nDays; d++) {
+        var hot = (i === cur && d === ti)
+        html += '<td class="' + (hot ? 'hot' : '') + (d === ti ? ' coltoday' : '') + '">' + esc(c[d] || '') + '</td>'
+      }
+      html += '</tr>'
+    }
+    html += '</table>'
+    container.innerHTML = html
+    fitWeekTable()
+  }
+
+  // 按窗口实际可用空间自动缩小表格字号，保证整张周表完整显示、不被上下裁切
+  var weekTableEl = null
+  function fitWeekTable() {
+    var tbl = container.querySelector('.tbl')
+    if (!tbl) return
+    weekTableEl = tbl
+    var fs = 15
+    tbl.style.fontSize = fs + 'px'
+    var guard = 0
+    while (guard++ < 40) {
+      var overflow = container.scrollHeight > container.clientHeight || container.scrollWidth > container.clientWidth
+      if (!overflow || fs <= 8) break
+      fs -= 0.5
+      tbl.style.fontSize = fs + 'px'
+    }
+  }
+
+  function renderDay(data, ti, cur) {
+    var secs = (data && data.sections) || [], grid = (data && data.grid) || []
+    if (secs.length === 0) {
+      container.innerHTML = '<div class="empty">暂无课程表<br>请在「设置 → 课程表」导入</div>'
+      return
+    }
+    var html = '<div class="dayframe"><div class="dayhead">' + dayName(ti) + '</div>'
+    for (var i = 0; i < secs.length; i++) {
+      var c = ((grid[i] || [])[ti] || '').trim()
+      var label = secs[i].name + (c ? ' ' + c : '')
+      html += '<div class="dayline' + (i === cur ? ' cur' : '') + '">' + esc(label) + '</div>'
+    }
+    html += '</div>'
+    container.innerHTML = html
+  }
+
+  render()
+  setInterval(render, 30000) // 每 30 秒重新计算当前课并刷新
+  window.addEventListener('resize', function () { if (weekTableEl && weekTableEl.isConnected) fitWeekTable() })
+  if (window.api.onScheduleRefresh) {
+    window.api.onScheduleRefresh(function() { render() }) // 导入后主进程推送刷新
+  }
+</script>
+</body>
+</html>

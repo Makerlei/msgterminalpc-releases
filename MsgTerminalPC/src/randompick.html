@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f0f2f5;
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+  .header h1 { font-size: 15px; color: #fff; font-weight: 700; }
+  .header-btns { margin-left: auto; display: flex; gap: 4px; -webkit-app-region: no-drag; }
+  .header-btn {
+    width: 24px; height: 24px; border: none; border-radius: 4px;
+    background: rgba(255,255,255,0.2); color: #fff;
+    font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .header-btn:hover { background: rgba(255,255,255,0.35); }
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px;
+    overflow: hidden;
+    gap: 6px;
+  }
+  .mode-tabs { display: flex; gap: 4px; flex-shrink: 0; }
+  .mode-tab {
+    flex: 1; padding: 7px; border: 2px solid #e2e8f0; border-radius: 6px;
+    background: #fff; color: #64748b; font-size: 14px; font-weight: 700;
+    cursor: pointer; text-align: center;
+  }
+  .mode-tab:hover { border-color: #a78bfa; color: #7c3aed; }
+  .mode-tab.active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
+  .settings-panel {
+    background: #fff; border-radius: 8px; padding: 8px 10px;
+    border: 1px solid #f1f5f9; flex-shrink: 0;
+  }
+  .settings-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .settings-row:last-child { margin-bottom: 0; }
+  .settings-row label { font-size: 14px; color: #64748b; font-weight: 600; min-width: 40px; }
+  .settings-row input[type="number"] {
+    flex: 1; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 5px;
+    font-size: 15px; color: #0f172a; background: #f8fafc; outline: none; min-width: 0;
+    font-weight: 600;
+  }
+  .settings-row input[type="number"]:focus { border-color: #7c3aed; }
+  .settings-row .count-input { width: 48px; flex: none; text-align: center; font-size: 16px; }
+  .settings-row .btn-import {
+    padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 5px;
+    background: #fff; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .settings-row .btn-import:hover { border-color: #7c3aed; color: #7c3aed; }
+  .name-list-info { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+  .limit-hint { font-size: 12px; color: #f59e0b; margin-top: 2px; display: none; }
+  .limit-hint.show { display: block; }
+  .checkbox-wrap { display: flex; align-items: center; gap: 3px; cursor: pointer; user-select: none; }
+  .checkbox-wrap.disabled { cursor: default; opacity: 0.6; }
+  .checkbox-wrap input[type="checkbox"] { display: none; }
+  .checkbox-box {
+    width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .checkbox-wrap input:checked + .checkbox-box { background: #7c3aed; border-color: #7c3aed; }
+  .checkbox-box::after {
+    content: ''; display: none; width: 3px; height: 7px;
+    border: solid #fff; border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg); margin-top: -2px;
+  }
+  .checkbox-wrap input:checked + .checkbox-box::after { display: block; }
+  .checkbox-text { font-size: 14px; color: #64748b; }
+
+  .result-area {
+    flex: 1;
+    min-height: 0;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+  .result-area.dark {
+    background: linear-gradient(135deg, #1e1b4b, #312e81, #3b0764);
+  }
+  #resultBox {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+    align-content: center;
+  }
+  .placeholder { color: #94a3b8; font-size: 15px; text-align: center; width: 100%; }
+  .big-num {
+    font-weight: 900; color: #fff; width: 100%; text-align: center;
+    text-shadow: 0 0 40px rgba(139,92,246,0.6), 0 0 80px rgba(139,92,246,0.3);
+    animation: pop 0.4s ease;
+  }
+  .card {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    animation: pop 0.4s ease;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  @keyframes pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .btn-area { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn {
+    flex: 1; padding: 9px; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff; box-shadow: 0 4px 12px rgba(124,58,237,0.35);
+  }
+  .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reset { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+  .btn-reset:hover { background: #e2e8f0; }
+  .history-text { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 2px; flex-shrink: 0; }
+  .history-text span { color: #7c3aed; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>随机点名</h1>
+  <div class="header-btns">
+    <button class="header-btn" id="btnMin">-</button>
+    <button class="header-btn" id="btnClose">X</button>
+  </div>
+</div>
+<div class="main">
+  <div class="mode-tabs">
+    <div class="mode-tab active" data-mode="number">数字模式</div>
+    <div class="mode-tab" data-mode="name">姓名模式</div>
+  </div>
+
+  <div class="settings-panel" id="numberSettings">
+    <div class="settings-row">
+      <label>最小值</label>
+      <input type="number" id="numMin" value="1">
+      <label>最大值</label>
+      <input type="number" id="numMax" value="50">
+    </div>
+    <div class="settings-row">
+      <label>数量</label>
+      <input type="number" id="numCount" value="1" min="1" class="count-input">
+      <label class="checkbox-wrap" id="uniqueWrap">
+        <input type="checkbox" id="pickUnique" checked>
+        <span class="checkbox-box"></span>
+        <span class="checkbox-text">不重复</span>
+      </label>
+      <label class="checkbox-wrap" id="soundWrap">
+        <input type="checkbox" id="pickSound" checked>
+        <span class="checkbox-box"></span>
+        <span class="checkbox-text">音效</span>
+      </label>
+    </div>
+    <div class="limit-hint" id="numLimitHint">最多12个，且不能超过数值范围</div>
+  </div>
+
+  <div class="settings-panel" id="nameSettings" style="display:none;">
+    <div class="settings-row">
+      <label>数量</label>
+      <input type="number" id="nameCount" value="1" min="1" class="count-input">
+      <button class="btn-import" id="btnImport">导入</button>
+      <button class="btn-import" id="btnClearNames">清空</button>
+    </div>
+    <div class="settings-row">
+      <label class="checkbox-wrap">
+        <input type="checkbox" id="nameSound" checked>
+        <span class="checkbox-box"></span>
+        <span class="checkbox-text">音效</span>
+      </label>
+    </div>
+    <div class="limit-hint" id="nameLimitHint">最多9个，且不能超过总人数</div>
+    <div class="name-list-info" id="nameListInfo">暂未导入名单</div>
+  </div>
+
+  <div class="result-area" id="resultArea">
+    <div id="resultBox"><span class="placeholder">点击下方按钮开始抽取</span></div>
+  </div>
+
+  <div class="btn-area">
+    <button class="btn btn-reset" id="btnReset">重置</button>
+    <button class="btn btn-start" id="btnStart">开始抽取</button>
+  </div>
+  <div class="history-text" id="historyText"></div>
+</div>
+
+<script>
+var MAX_NUM = 12;
+var MAX_NAME = 9;
+var mode = 'number';
+var rolling = false;
+var timer = null;
+var names = [];
+var usedNum = {};
+var usedNam = {};
+
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+var actx = null;
+function beep() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = actx.createOscillator();
+    var g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.frequency.value = 800; g.gain.value = 0.08;
+    o.start(); o.stop(actx.currentTime + 0.05);
+  } catch(e) {}
+}
+function winSound() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = actx.createOscillator();
+    var g = actx.createGain();
+    o.connect(g); g.connect(actx.destination);
+    o.frequency.value = 1200; g.gain.value = 0.15;
+    o.start();
+    o.frequency.setValueAtTime(1500, actx.currentTime + 0.1);
+    o.frequency.setValueAtTime(1800, actx.currentTime + 0.2);
+    g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.5);
+    o.stop(actx.currentTime + 0.5);
+  } catch(e) {}
+}
+function soundOn() {
+  return mode === 'number' ? document.getElementById('pickSound').checked : document.getElementById('nameSound').checked;
+}
+
+function checkNum() {
+  var min = parseInt(document.getElementById('numMin').value) || 1;
+  var max = parseInt(document.getElementById('numMax').value) || 50;
+  var c = parseInt(document.getElementById('numCount').value) || 1;
+  var r = Math.abs(max - min) + 1;
+  var em = Math.min(r, MAX_NUM);
+  var h = document.getElementById('numLimitHint');
+  if (c > em || c < 1) {
+    h.classList.add('show');
+    document.getElementById('numCount').value = Math.max(1, Math.min(c, em));
+  } else { h.classList.remove('show'); }
+}
+function checkNam() {
+  var c = parseInt(document.getElementById('nameCount').value) || 1;
+  var h = document.getElementById('nameLimitHint');
+  if (names.length === 0) { h.classList.remove('show'); return; }
+  var em = Math.min(names.length, MAX_NAME);
+  if (c > em || c < 1) {
+    h.classList.add('show');
+    document.getElementById('nameCount').value = Math.max(1, Math.min(c, em));
+  } else { h.classList.remove('show'); }
+}
+
+document.querySelectorAll('.mode-tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    if (rolling) return;
+    document.querySelectorAll('.mode-tab').forEach(function(x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    mode = t.dataset.mode;
+    document.getElementById('numberSettings').style.display = mode === 'number' ? '' : 'none';
+    document.getElementById('nameSettings').style.display = mode === 'name' ? '' : 'none';
+    doReset();
+  });
+});
+
+function dedupe(arr) {
+  var u = []; var s = {};
+  for (var i = 0; i < arr.length; i++) {
+    var n = String(arr[i]).trim();
+    if (n && !s[n]) { s[n] = true; u.push(n); }
+  }
+  return u;
+}
+
+function loadSaved() {
+  window.api.getConfig().then(function(c) {
+    if (c.pickMin !== undefined) document.getElementById('numMin').value = c.pickMin;
+    if (c.pickMax !== undefined) document.getElementById('numMax').value = c.pickMax;
+    if (c.pickCount !== undefined) document.getElementById('numCount').value = c.pickCount;
+    if (c.pickUnique !== undefined) document.getElementById('pickUnique').checked = c.pickUnique;
+    if (c.pickSound !== undefined) {
+      document.getElementById('pickSound').checked = c.pickSound;
+      document.getElementById('nameSound').checked = c.pickSound;
+    }
+    updUni(); checkNum();
+  });
+  window.api.loadNameList().then(function(n) {
+    if (n && n.length > 0) {
+      names = dedupe(n);
+      if (names.length !== n.length) window.api.saveNameList(names);
+      usedNam = {};
+      updateNameInfo();
+    } else {
+      names = [];
+      document.getElementById('nameListInfo').textContent = '暂未导入名单';
+    }
+    checkNam();
+  });
+}
+function updateNameInfo() {
+  var p = names.slice(0, 6).join(', ');
+  document.getElementById('nameListInfo').textContent = '已导入 ' + names.length + ' 个: ' + p + (names.length > 6 ? '...' : '');
+}
+
+function saveCfg() {
+  window.api.savePickSettings({
+    pickMin: parseInt(document.getElementById('numMin').value) || 1,
+    pickMax: parseInt(document.getElementById('numMax').value) || 50,
+    pickCount: parseInt(document.getElementById('numCount').value) || 1,
+    pickUnique: document.getElementById('pickUnique').checked,
+    pickSound: document.getElementById('pickSound').checked
+  });
+}
+['numMin','numMax','numCount'].forEach(function(id) {
+  document.getElementById(id).addEventListener('change', function() { checkNum(); saveCfg(); });
+});
+document.getElementById('pickUnique').addEventListener('change', saveCfg);
+document.getElementById('pickSound').addEventListener('change', function() {
+  saveCfg();
+  document.getElementById('nameSound').checked = document.getElementById('pickSound').checked;
+});
+document.getElementById('nameSound').addEventListener('change', function() {
+  window.api.getConfig().then(function(c) {
+    c.pickSound = document.getElementById('nameSound').checked;
+    window.api.saveConfig(c);
+    document.getElementById('pickSound').checked = c.pickSound;
+  });
+});
+document.getElementById('nameCount').addEventListener('change', checkNam);
+document.getElementById('numCount').addEventListener('input', function() { updUni(); checkNum(); });
+
+function updUni() {
+  var c = parseInt(document.getElementById('numCount').value) || 1;
+  var w = document.getElementById('uniqueWrap');
+  var cb = document.getElementById('pickUnique');
+  if (c > 1) { cb.checked = true; w.classList.add('disabled'); }
+  else { w.classList.remove('disabled'); }
+  saveCfg();
+}
+
+function buildPool() {
+  var count, pool = [], isUniq, used;
+  if (mode === 'number') {
+    var min = parseInt(document.getElementById('numMin').value) || 1;
+    var max = parseInt(document.getElementById('numMax').value) || 50;
+    count = parseInt(document.getElementById('numCount').value) || 1;
+    isUniq = document.getElementById('pickUnique').checked;
+    if (min > max) { var t = min; min = max; max = t; }
+    var r = Math.abs(max - min) + 1;
+    var em = Math.min(r, MAX_NUM);
+    if (count > em) { count = em; document.getElementById('numCount').value = count; }
+    for (var i = min; i <= max; i++) pool.push(i);
+    if (count > 1) isUniq = true;
+    used = usedNum;
+  } else {
+    count = parseInt(document.getElementById('nameCount').value) || 1;
+    isUniq = true;
+    if (names.length === 0) return null;
+    var em2 = Math.min(names.length, MAX_NAME);
+    if (count > em2) { count = em2; document.getElementById('nameCount').value = count; }
+    for (var k = 0; k < names.length; k++) pool.push(names[k]);
+    used = usedNam;
+  }
+  if (isUniq) {
+    var avail = [];
+    for (var j = 0; j < pool.length; j++) {
+      if (!used[pool[j]]) avail.push(pool[j]);
+    }
+    if (avail.length < count) {
+      for (var key in used) { delete used[key]; }
+      avail = pool.slice();
+    }
+    pool = avail;
+  }
+  if (count > pool.length) count = pool.length;
+  return { count: count, pool: pool, isUniq: isUniq, used: used };
+}
+
+function render(items, isFinal) {
+  var box = document.getElementById('resultBox');
+  var area = document.getElementById('resultArea');
+  var html = '';
+  var areaW = area.clientWidth - 20;
+  var areaH = area.clientHeight - 20;
+  var maxFs = Math.min(Math.floor(areaW * 0.45), Math.floor(areaH * 0.85));
+  if (maxFs < 16) maxFs = 16;
+
+  if (items.length === 1) {
+    var textLen = String(items[0]).length;
+    var fs = Math.floor(areaW / (textLen + 0.5));
+    fs = Math.max(20, Math.min(maxFs, fs));
+    html = '<div class="big-num" style="font-size:' + fs + 'px;letter-spacing:' + Math.floor(fs * 0.06) + 'px">' + items[0] + '</div>';
+  } else {
+    var gap = 8;
+    var count = items.length;
+    var maxLen = 1;
+    for (var m = 0; m < items.length; m++) {
+      var len = String(items[m]).length;
+      if (len > maxLen) maxLen = len;
+    }
+    var cols = Math.ceil(Math.sqrt(count * (areaW / areaH)));
+    if (cols < 1) cols = 1;
+    if (cols > count) cols = count;
+    var rows = Math.ceil(count / cols);
+    var cellW = (areaW - gap * (cols - 1)) / cols;
+    var cellH = (areaH - gap * (rows - 1)) / rows;
+    var fsByH = Math.floor(cellH * 0.5);
+    var fsByW = Math.floor(cellW / (maxLen + 0.6));
+    var fs = Math.max(14, Math.min(maxFs, Math.min(fsByH, fsByW)));
+    var pad = Math.max(3, Math.floor(fs * 0.15));
+
+    for (var i = 0; i < items.length; i++) {
+      html += '<div class="card" style="font-size:' + fs + 'px;padding:' + pad + 'px ' + (pad * 2) + 'px">' + items[i] + '</div>';
+    }
+  }
+  box.innerHTML = html;
+}
+
+function startRoll() {
+  if (rolling) return;
+  var r = buildPool();
+  if (!r) { alert('请先导入姓名名单'); return; }
+  if (r.count <= 0 || r.pool.length === 0) return;
+
+  var count = r.count;
+  var pool = r.pool.slice();
+  var isUniq = r.isUniq;
+  var used = r.used;
+  var finalShuffled = shuffle(pool);
+  var selected = finalShuffled.slice(0, count);
+
+  rolling = true;
+  var area = document.getElementById('resultArea');
+  var btn = document.getElementById('btnStart');
+  area.classList.add('dark');
+  btn.disabled = true;
+
+  var elapsed = 0;
+  var dur = 2000;
+  var gap = 80;
+  var snd = soundOn();
+
+  timer = setInterval(function() {
+    elapsed += gap;
+    if (snd) beep();
+    render(shuffle(pool).slice(0, count), false);
+    if (elapsed >= dur) {
+      clearInterval(timer);
+      timer = null;
+      render(selected, true);
+      if (snd) winSound();
+      if (isUniq) {
+        for (var k = 0; k < selected.length; k++) used[selected[k]] = true;
+      }
+      updateHistory();
+      rolling = false;
+      btn.disabled = false;
+    }
+  }, gap);
+}
+
+function updateHistory() {
+  var h = document.getElementById('historyText');
+  if (mode === 'number') {
+    var c = 0; for (var n in usedNum) c++;
+    h.innerHTML = '已抽取 <span>' + c + '</span> 个数字';
+  } else {
+    var c2 = 0; for (var m in usedNam) c2++;
+    h.innerHTML = '已抽取 <span>' + c2 + '</span> 个姓名';
+  }
+}
+
+function doReset() {
+  if (timer) { clearInterval(timer); timer = null; }
+  rolling = false;
+  usedNum = {};
+  usedNam = {};
+  document.getElementById('resultArea').classList.remove('dark');
+  document.getElementById('resultBox').innerHTML = '<span class="placeholder">点击下方按钮开始抽取</span>';
+  document.getElementById('resultBox').style.minHeight = '100%';
+  document.getElementById('resultBox').style.alignContent = 'center';
+  document.getElementById('historyText').innerHTML = '';
+  document.getElementById('btnStart').disabled = false;
+}
+
+document.getElementById('btnImport').addEventListener('click', function() { window.api.importExcel(); });
+window.api.onImportResult(function(data) {
+  if (data && data.length > 0) {
+    names = dedupe(data);
+    window.api.saveNameList(names);
+    usedNam = {};
+    updateNameInfo();
+    document.getElementById('historyText').innerHTML = '';
+    checkNam();
+  } else { alert('未读取到有效姓名'); }
+});
+document.getElementById('btnClearNames').addEventListener('click', function() {
+  window.api.clearNameList().then(function() {
+    names = []; usedNam = {};
+    document.getElementById('nameListInfo').textContent = '暂未导入名单';
+    document.getElementById('historyText').innerHTML = '';
+    document.getElementById('nameLimitHint').classList.remove('show');
+  });
+});
+
+document.getElementById('btnStart').addEventListener('click', startRoll);
+document.getElementById('btnReset').addEventListener('click', doReset);
+document.getElementById('btnClose').addEventListener('click', function() { window.api.closeRandomPick(); });
+document.getElementById('btnMin').addEventListener('click', function() { window.api.minimizeRandomPick(); });
+
+loadSaved();
+</script>
+</body>
+</html>

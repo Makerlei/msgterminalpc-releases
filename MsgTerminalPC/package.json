@@ -1,0 +1,56 @@
+{
+  "name": "msg-terminal-pc",
+  "version": "1.2.8",
+  "description": "消息终端",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "mqtt": "^5.0.0",
+    "xlsx": "^0.18.5",
+    "electron-updater": "^6.3.0"
+  },
+  "build": {
+    "appId": "com.msgterminal.pc",
+    "productName": "消息终端",
+    "asar": true,
+    "electronLanguages": [
+      "zh-CN"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "消息终端",
+      "artifactName": "MsgTerminal-Setup-${version}.${ext}"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      "inject-desktop.ps1"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Makerlei",
+        "repo": "msgterminalpc-releases"
+      }
+    ]
+  }
+}

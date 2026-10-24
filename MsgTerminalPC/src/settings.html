@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f1f5f9;
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .header {
+    background: #ffffff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+    -webkit-app-region: drag;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-size: 15px;
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+  .header-btns {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    -webkit-app-region: no-drag;
+  }
+  .header-btn {
+    width: 28px; height: 28px;
+    border: none; border-radius: 6px;
+    background: #f8fafc; color: #94a3b8;
+    font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    -webkit-app-region: no-drag;
+    pointer-events: auto;
+  }
+  .header-btn:hover { background: #f1f5f9; color: #64748b; }
+  .header-btn.close:hover { background: #fee2e2; color: #ef4444; }
+
+  .body { flex: 1; display: flex; min-height: 0; }
+  .sidebar {
+    width: 140px;
+    background: #ffffff;
+    border-right: 1px solid #f1f5f9;
+    flex-shrink: 0;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    padding: 11px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { background: #f8fafc; color: #334155; }
+  .nav-item.active {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.25);
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .field { margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .field input[type="text"],
+  .field input[type="password"],
+  .field input[type="number"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #0f172a;
+    background: #f8fafc;
+    outline: none;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .field input:focus {
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
+  }
+  .field input::placeholder { color: #cbd5e1; font-weight: 400; }
+
+  .switch-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 0;
+  }
+  .switch-info { display: flex; flex-direction: column; gap: 1px; }
+  .switch-label { font-size: 13px; color: #0f172a; font-weight: 600; }
+  .switch-desc { font-size: 11px; color: #94a3b8; font-weight: 400; }
+  .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #e2e8f0;
+    border-radius: 24px;
+    transition: all 0.25s;
+  }
+  .switch .slider::before {
+    content: '';
+    position: absolute;
+    height: 18px; width: 18px;
+    left: 3px; bottom: 3px;
+    background: #ffffff;
+    border-radius: 50%;
+    transition: all 0.25s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .switch input:checked + .slider {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+  }
+  .switch input:checked + .slider::before {
+    transform: translateX(20px);
+  }
+  .divider {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 8px 0;
+  }
+
+  .seg { display: flex; gap: 8px; }
+  .mode-btn {
+    flex: 1; padding: 9px 8px; border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active { background: linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border-color: transparent; }
+  .btn-save-ghost {
+    width: 100%; padding: 9px; margin-top: 8px;
+    border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;
+    color: #475569; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-save-ghost:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+  .card-msg { font-size: 11px; margin-top: 8px; height: 14px; font-weight: 600; }
+  .card-msg.success { color: #10b981; }
+  .card-msg.error { color: #ef4444; }
+
+  .mute-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .mute-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    transition: all 0.15s;
+  }
+  .mute-item:hover { border-color: #cbd5e1; }
+  .mute-item .mute-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+  .mute-item input[type="text"] {
+    width: 60px;
+    padding: 5px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #0f172a;
+    background: #ffffff;
+    outline: none;
+    text-align: center;
+    font-weight: 600;
+    font-family: 'Consolas', monospace;
+  }
+  .mute-item input[type="text"]:focus { border-color: #3b82f6; }
+  .mute-item input[type="text"]::placeholder { color: #cbd5e1; font-weight: 400; }
+  .mute-item input.mute-label {
+    width: 70px;
+    text-align: left;
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-weight: 500;
+  }
+  .mute-sep { color: #94a3b8; font-size: 12px; font-weight: 600; }
+  .mute-del {
+    width: 26px; height: 26px;
+    border: 1px solid #e2e8f0; border-radius: 6px;
+    background: #ffffff; color: #94a3b8;
+    font-size: 13px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .mute-del:hover { background: #fee2e2; border-color: #fecaca; color: #ef4444; }
+  .btn-add-mute {
+    width: 100%;
+    padding: 8px;
+    border: 2px dashed #e2e8f0;
+    border-radius: 8px;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-add-mute:hover { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+
+  .pwd-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .pwd-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #0f172a;
+    background: #f8fafc;
+    outline: none;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .pwd-row input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+  .pwd-row input::placeholder { color: #cbd5e1; font-weight: 400; }
+  .hint-row { margin-bottom: 8px; }
+  .hint-row input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #0f172a;
+    background: #f8fafc;
+    outline: none;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .hint-row input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+  .hint-row input::placeholder { color: #cbd5e1; font-weight: 400; }
+  .btn-change-pwd {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-change-pwd:hover { background: #e2e8f0; }
+  .pwd-msg {
+    font-size: 11px;
+    margin-top: 6px;
+    height: 14px;
+    font-weight: 600;
+  }
+  .pwd-msg.success { color: #10b981; }
+  .pwd-msg.error { color: #ef4444; }
+
+  .cd-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .cd-row { display: flex; align-items: center; gap: 8px; }
+  .cd-row + .cd-row { margin-top: 10px; }
+  .cd-name {
+    flex: 1;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #1e293b;
+    outline: none;
+    background: #fff;
+  }
+  .cd-name:focus { border-color: #3b82f6; }
+  .cd-sel, .cd-year {
+    height: 30px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #1e293b;
+    background: #fff;
+    outline: none;
+    padding: 0 6px;
+  }
+  .cd-year { width: 74px; }
+  .cd-year:disabled { background: #e2e8f0; color: #94a3b8; }
+  .cd-lb { font-size: 12px; color: #64748b; }
+  .cd-auto { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #475569; cursor: pointer; }
+  .cd-del {
+    border: none; background: #fef2f2; color: #dc2626;
+    height: 30px; padding: 0 12px; border-radius: 7px;
+    font-size: 12px; cursor: pointer;
+  }
+  .cd-del:hover { background: #fee2e2; }
+  .cd-swatch {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    padding: 0; outline: none;
+  }
+  .cd-swatch.active { border-color: #1e293b; }
+  .cd-add-row { display: flex; gap: 8px; margin: 4px 0 10px; flex-wrap: wrap; }
+  .cd-btn {
+    height: 32px; padding: 0 14px;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #fff; color: #334155;
+    font-size: 12.5px; cursor: pointer;
+  }
+  .cd-btn:hover { border-color: #3b82f6; color: #2563eb; }
+  .cd-tip {
+    font-size: 11.5px; color: #94a3b8; line-height: 1.7;
+    background: #f1f5f9; border-radius: 8px; padding: 8px 12px;
+  }
+  .cd-empty { font-size: 13px; color: #94a3b8; text-align: center; padding: 24px 0; }
+
+  .footer {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+  }
+  .btn-save {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+  }
+  .btn-save:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59,130,246,0.35); }
+  .btn-save:active { transform: translateY(0); }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 8px 24px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    z-index: 99;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>设置</h1>
+  <div class="header-btns">
+    <button class="header-btn close" id="btnClose">&#10005;</button>
+  </div>
+</div>
+<div class="body">
+  <div class="sidebar" id="sidebar">
+    <div class="nav-item active" data-target="connect">连接</div>
+    <div class="nav-item" data-target="notify">通知</div>
+    <div class="nav-item" data-target="schedule">课程表</div>
+    <div class="nav-item" data-target="countdown">倒计时</div>
+    <div class="nav-item" data-target="system">系统</div>
+  </div>
+  <div class="content" id="content">
+
+    <!-- 连接 -->
+    <div class="section active" id="section-connect">
+      <div class="card">
+        <div class="card-title">OneNET 配置</div>
+        <div class="field">
+          <label>产品 ID</label>
+          <input id="productId" type="text" placeholder="例如: 7cMahi86Go">
+        </div>
+        <div class="field">
+          <label>设备名称</label>
+          <input id="deviceName" type="text" placeholder="例如: my_receiver">
+        </div>
+        <div class="field">
+          <label>设备密钥</label>
+          <input id="deviceKey" type="password" placeholder="例如: MnYxd3Ywc09rbTFycldWOXc5Z1BMdmNvSURpRTFIUlY=">
+        </div>
+      </div>
+    </div>
+
+    <!-- 通知 -->
+    <div class="section" id="section-notify">
+      <div class="card">
+        <div class="card-title">通知设置</div>
+        <div class="switch-field">
+          <div class="switch-info">
+            <span class="switch-label">语音播报消息</span>
+            <span class="switch-desc">开启后收到消息自动朗读内容，关闭后仅播放提示音</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="voiceEnabled">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">静音时段</div>
+        <div class="mute-list" id="muteList"></div>
+        <button class="btn-add-mute" id="btnAddMute">+ 添加静音时段</button>
+      </div>
+    </div>
+
+    <!-- 课程表 -->
+    <div class="section" id="section-schedule">
+      <div class="card">
+        <div class="card-title">课程表</div>
+        <div class="switch-field">
+          <div class="switch-info">
+            <span class="switch-label">开机显示课程表</span>
+            <span class="switch-desc">开机后在大屏显示课程表，鼠标可穿透操作</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="scheduleVisible">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div class="field">
+          <label>显示模式</label>
+          <div class="seg">
+            <button type="button" class="mode-btn" id="modeWeek" data-mode="week">整周（屏幕右下）</button>
+            <button type="button" class="mode-btn" id="modeDay" data-mode="day">当天（右侧竖排）</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="switch-field">
+          <div class="switch-info">
+            <span class="switch-label">显示周六周日</span>
+            <span class="switch-desc">整周显示是否含周六、周日两列；当天显示在周末自动隐藏</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="scheduleWeekend">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <button class="btn-save-ghost" id="btnImportSchedule">导入 Excel</button>
+        <button class="btn-save-ghost" id="btnDownloadTemplate">下载空白模板</button>
+        <button class="btn-save-ghost" id="btnExportCheck">导出当前课程表核对</button>
+        <div class="card-msg" id="scheduleMsg"></div>
+      </div>
+    </div>
+
+    <!-- 倒计时 -->
+    <div class="section" id="section-countdown">
+      <div class="card">
+        <div class="card-title">倒计时</div>
+        <div id="countdownList"></div>
+        <div class="cd-add-row">
+          <button class="cd-btn" id="btnAddCd">+ 自定义</button>
+          <button class="cd-btn" id="btnZk">+ 中考（6月22日）</button>
+          <button class="cd-btn" id="btnGk">+ 高考（6月7日）</button>
+        </div>
+        <div class="cd-tip">
+          勾选「每年自动更新」后只认月日，日期过了自动跳到下一年（中考 / 高考用这个）。<br>
+          取消勾选并填年份 = 固定日期，如期末考试、运动会。
+        </div>
+      </div>
+    </div>
+
+    <!-- 系统 -->
+    <div class="section" id="section-system">
+      <div class="card">
+        <div class="card-title">启动与更新</div>
+        <div class="switch-field">
+          <div class="switch-info">
+            <span class="switch-label">开机自动启动</span>
+            <span class="switch-desc">开机后自动运行消息终端</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="autoLaunch">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <button class="btn-save-ghost" id="btnCheckUpdate">检查更新</button>
+      </div>
+      <div class="card">
+        <div class="card-title">修改密码</div>
+        <div class="pwd-row">
+          <input type="password" id="oldPwd" placeholder="当前密码">
+        </div>
+        <div class="pwd-row">
+          <input type="password" id="newPwd" placeholder="新密码（至少4位）">
+          <input type="password" id="confirmPwd" placeholder="确认新密码">
+        </div>
+        <div class="hint-row">
+          <input type="text" id="pwdHint" placeholder="密码提示（忘记密码时可查看）">
+        </div>
+        <button class="btn-change-pwd" id="btnChangePwd">修改密码</button>
+        <div class="pwd-msg" id="pwdMsg"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="footer">
+  <button class="btn-save" id="btnSave">保存设置</button>
+</div>
+<div class="toast" id="toast">已保存</div>
+
+<script>
+  var currentMuteSlots = []
+  var currentScheduleMode = 'week'
+  var currentCountdowns = []
+  var CD_COLORS = ['#dc2626', '#ea580c', '#d97706', '#16a34a', '#2563eb', '#7c3aed', '#0f172a']
+
+  function generateId() {
+    return 'slot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+  }
+  function cdNewId() {
+    return 'cd_' + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36)
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    })
+  }
+
+  // ===== 侧边栏切换 =====
+  function switchSection(target) {
+    document.querySelectorAll('.nav-item').forEach(function (n) {
+      n.classList.toggle('active', n.getAttribute('data-target') === target)
+    })
+    document.querySelectorAll('.section').forEach(function (s) {
+      s.classList.toggle('active', s.id === 'section-' + target)
+    })
+  }
+  document.getElementById('sidebar').addEventListener('click', function (e) {
+    var item = e.target.closest('.nav-item')
+    if (!item) return
+    switchSection(item.getAttribute('data-target'))
+  });
+  // 初始分组（来自 ?tab=）
+  ;(function initTab() {
+    var m = /[?&]tab=([^&]+)/.exec(location.search)
+    if (m) switchSection(decodeURIComponent(m[1]))
+  })()
+
+  // ===== 静音时段 =====
+  function renderMuteSlots() {
+    var html = ''
+    for (var i = 0; i < currentMuteSlots.length; i++) {
+      var s = currentMuteSlots[i]
+      html += '<div class="mute-item">'
+      html += '<div class="mute-inputs">'
+      html += '<input type="text" class="mute-label" value="' + esc(s.label || '') + '" placeholder="备注" onchange="updateSlot(' + i + ',\'label\',this.value)">'
+      html += '<input type="text" value="' + esc(s.start || '') + '" placeholder="00:00" onchange="updateSlot(' + i + ',\'start\',this.value)">'
+      html += '<span class="mute-sep">至</span>'
+      html += '<input type="text" value="' + esc(s.end || '') + '" placeholder="08:00" onchange="updateSlot(' + i + ',\'end\',this.value)">'
+      html += '</div>'
+      html += '<button type="button" class="mute-del" data-index="' + i + '" title="删除该静音时段">&#10005;</button>'
+      html += '</div>'
+    }
+    if (currentMuteSlots.length === 0) {
+      html = '<div style="text-align:center;color:#94a3b8;font-size:12px;padding:10px 0;">暂无静音时段</div>'
+    }
+    document.getElementById('muteList').innerHTML = html
+  }
+  function updateSlot(index, field, value) {
+    if (currentMuteSlots[index]) currentMuteSlots[index][field] = value.trim()
+  }
+  function deleteSlot(index) {
+    currentMuteSlots.splice(index, 1)
+    renderMuteSlots()
+  }
+
+  // ===== 课程表 =====
+  function updateModeButtons() {
+    document.getElementById('modeWeek').classList.toggle('active', currentScheduleMode === 'week')
+    document.getElementById('modeDay').classList.toggle('active', currentScheduleMode === 'day')
+  }
+
+  // ===== 倒计时 =====
+  function cdOptions(from, to, cur) {
+    var h = ''
+    for (var i = from; i <= to; i++) {
+      h += '<option value="' + i + '"' + (parseInt(cur, 10) === i ? ' selected' : '') + '>' + i + '</option>'
+    }
+    return h
+  }
+  function renderCountdowns() {
+    var el = document.getElementById('countdownList')
+    if (!currentCountdowns.length) {
+      el.innerHTML = '<div class="cd-empty">还没有倒计时，点上面的按钮添加一个</div>'
+      return
+    }
+    var h = ''
+    for (var i = 0; i < currentCountdowns.length; i++) {
+      var it = currentCountdowns[i]
+      var sw = ''
+      for (var c = 0; c < CD_COLORS.length; c++) {
+        sw += '<button class="cd-swatch' + (it.color === CD_COLORS[c] ? ' active' : '') + '" data-act="color" data-color="' + CD_COLORS[c] + '" style="background:' + CD_COLORS[c] + '"></button>'
+      }
+      h += '<div class="cd-item" data-i="' + i + '">'
+        + '<div class="cd-row">'
+        +   '<input type="checkbox" data-f="enabled"' + (it.enabled !== false ? ' checked' : '') + '>'
+        +   '<input type="text" class="cd-name" data-f="name" value="' + esc(it.name) + '" placeholder="名称，如 中考">'
+        +   '<button class="cd-del" data-act="del">删除</button>'
+        + '</div>'
+        + '<div class="cd-row">'
+        +   '<select class="cd-sel" data-f="month">' + cdOptions(1, 12, it.month) + '</select><span class="cd-lb">月</span>'
+        +   '<select class="cd-sel" data-f="day">' + cdOptions(1, 31, it.day) + '</select><span class="cd-lb">日</span>'
+        +   '<input type="number" class="cd-year" data-f="year" value="' + (it.year || '') + '" placeholder="年份"' + (it.autoYear ? ' disabled' : '') + '>'
+        +   '<label class="cd-auto"><input type="checkbox" data-f="autoYear"' + (it.autoYear ? ' checked' : '') + '>每年自动更新</label>'
+        + '</div>'
+        + '<div class="cd-row"><span class="cd-lb">颜色</span>' + sw + '</div>'
+        + '</div>'
+    }
+    el.innerHTML = h
+  }
+  document.getElementById('countdownList').addEventListener('input', function (e) {
+    var f = e.target.getAttribute('data-f')
+    if (!f) return
+    var box = e.target.closest('.cd-item')
+    if (!box) return
+    var it = currentCountdowns[parseInt(box.getAttribute('data-i'), 10)]
+    if (f === 'name') it.name = e.target.value
+    else if (f === 'year') it.year = e.target.value ? parseInt(e.target.value, 10) : null
+    else if (f === 'month') it.month = parseInt(e.target.value, 10)
+    else if (f === 'day') it.day = parseInt(e.target.value, 10)
+  })
+  document.getElementById('countdownList').addEventListener('change', function (e) {
+    var f = e.target.getAttribute('data-f')
+    if (!f) return
+    var box = e.target.closest('.cd-item')
+    if (!box) return
+    var idx = parseInt(box.getAttribute('data-i'), 10)
+    var it = currentCountdowns[idx]
+    if (f === 'enabled') it.enabled = e.target.checked
+    else if (f === 'autoYear') { it.autoYear = e.target.checked; renderCountdowns() }
+    else if (f === 'month') it.month = parseInt(e.target.value, 10)
+    else if (f === 'day') it.day = parseInt(e.target.value, 10)
+  })
+  document.getElementById('countdownList').addEventListener('click', function (e) {
+    var t = e.target
+    var act = t.getAttribute('data-act')
+    if (!act) return
+    var box = t.closest('.cd-item')
+    if (!box) return
+    var idx = parseInt(box.getAttribute('data-i'), 10)
+    if (act === 'del') { currentCountdowns.splice(idx, 1); renderCountdowns() }
+    else if (act === 'color') { currentCountdowns[idx].color = t.getAttribute('data-color'); renderCountdowns() }
+  })
+  function cdAdd(item) { currentCountdowns.push(item); renderCountdowns() }
+  document.getElementById('btnAddCd').onclick = function () {
+    var now = new Date()
+    cdAdd({ id: cdNewId(), name: '新倒计时', month: now.getMonth() + 1, day: now.getDate(), year: now.getFullYear(), autoYear: false, enabled: true, color: '#2563eb' })
+  }
+  document.getElementById('btnZk').onclick = function () {
+    cdAdd({ id: cdNewId(), name: '中考', month: 6, day: 22, year: null, autoYear: true, enabled: true, color: '#2563eb' })
+  }
+  document.getElementById('btnGk').onclick = function () {
+    cdAdd({ id: cdNewId(), name: '高考', month: 6, day: 7, year: null, autoYear: true, enabled: true, color: '#dc2626' })
+  }
+
+  // ===== 课程表事件 =====
+  window.api.onScheduleImportResult(function (d) {
+    var el = document.getElementById('scheduleMsg')
+    if (d.canceled) { el.textContent = ''; el.className = 'card-msg'; return }
+    if (d.ok) { el.textContent = '已导入 ' + d.count + ' 节课程，大屏已刷新' + (d.warn ? '；⚠ ' + d.warn : ''); el.className = 'card-msg ' + (d.warn ? 'error' : 'success') }
+    else { el.textContent = d.msg || '导入失败'; el.className = 'card-msg error' }
+  })
+  window.api.onScheduleTemplateSaved(function (d) {
+    var el = document.getElementById('scheduleMsg')
+    if (d.ok) { el.textContent = '模板已保存：' + d.path; el.className = 'card-msg success' }
+  })
+  window.api.onScheduleExportSaved(function (d) {
+    var el = document.getElementById('scheduleMsg')
+    if (d.ok) { el.textContent = '已导出核对文件：' + d.path; el.className = 'card-msg success' }
+  })
+  document.getElementById('modeWeek').addEventListener('click', function () {
+    currentScheduleMode = 'week'; updateModeButtons(); window.api.applyScheduleMode('week')
+  })
+  document.getElementById('modeDay').addEventListener('click', function () {
+    currentScheduleMode = 'day'; updateModeButtons(); window.api.applyScheduleMode('day')
+  })
+  document.getElementById('btnImportSchedule').addEventListener('click', function () {
+    var el = document.getElementById('scheduleMsg')
+    el.textContent = '请在弹窗中选择 Excel 文件…'; el.className = 'card-msg'
+    window.api.importScheduleExcel()
+  })
+  document.getElementById('btnDownloadTemplate').addEventListener('click', function () {
+    window.api.downloadScheduleTemplate()
+  })
+  document.getElementById('btnExportCheck').addEventListener('click', function () {
+    window.api.loadSchedule().then(function (data) {
+      var el = document.getElementById('scheduleMsg')
+      if (!data || !data.sections || data.sections.length === 0) {
+        el.textContent = '当前没有课程表数据可导出'; el.className = 'card-msg error'; return
+      }
+      window.api.exportScheduleCheck(data)
+    })
+  })
+
+  // ===== 系统事件 =====
+  document.getElementById('btnCheckUpdate').addEventListener('click', function () {
+    window.api.checkForUpdate()
+  })
+
+  document.getElementById('btnAddMute').addEventListener('click', function () {
+    currentMuteSlots.push({ id: generateId(), start: '', end: '', label: '' })
+    renderMuteSlots()
+  })
+
+  // 删除静音时段：事件委托绑定在容器上，列表重建后依然有效
+  document.getElementById('muteList').addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.mute-del') : null
+    if (!btn) return
+    var idx = parseInt(btn.getAttribute('data-index'), 10)
+    if (!isNaN(idx)) deleteSlot(idx)
+  })
+
+  // ===== 加载 =====
+  function load() {
+    window.api.getConfig().then(function (cfg) {
+      document.getElementById('productId').value = cfg.productId || ''
+      document.getElementById('deviceName').value = cfg.deviceName || ''
+      document.getElementById('deviceKey').value = cfg.deviceKey || ''
+      document.getElementById('voiceEnabled').checked = cfg.voiceEnabled !== false
+
+      window.api.getAutoLaunch().then(function (enabled) {
+        document.getElementById('autoLaunch').checked = enabled
+      })
+
+      if (Array.isArray(cfg.muteSlots)) {
+        currentMuteSlots = JSON.parse(JSON.stringify(cfg.muteSlots))
+      } else {
+        currentMuteSlots = [
+          { id: generateId(), start: '12:00', end: '13:30', label: '午休' },
+          { id: generateId(), start: '22:00', end: '07:00', label: '夜间' }
+        ]
+      }
+      document.getElementById('scheduleVisible').checked = cfg.scheduleVisible !== false
+      document.getElementById('scheduleWeekend').checked = cfg.scheduleShowWeekend !== false
+      currentScheduleMode = cfg.scheduleMode === 'day' ? 'day' : 'week'
+      updateModeButtons()
+      currentCountdowns = (cfg && Array.isArray(cfg.countdowns) && cfg.countdowns.length) ? cfg.countdowns : []
+      renderMuteSlots()
+      renderCountdowns()
+    })
+  }
+
+  // ===== 保存 =====
+  function showToast() {
+    var t = document.getElementById('toast')
+    t.classList.add('show')
+    setTimeout(function () { t.classList.remove('show') }, 2000)
+  }
+  document.getElementById('btnSave').addEventListener('click', function () {
+    window.api.getConfig().then(function (oldCfg) {
+      var config = {
+        productId: document.getElementById('productId').value.trim(),
+        deviceName: document.getElementById('deviceName').value.trim(),
+        deviceKey: document.getElementById('deviceKey').value.trim(),
+        muteSlots: currentMuteSlots,
+        fontSize: oldCfg.fontSize || 72,
+        volume: oldCfg.volume || 80,
+        voiceEnabled: document.getElementById('voiceEnabled').checked,
+        clockVisible: oldCfg.clockVisible !== undefined ? oldCfg.clockVisible : true,
+        floatVisible: oldCfg.floatVisible !== undefined ? oldCfg.floatVisible : true,
+        scheduleVisible: document.getElementById('scheduleVisible').checked,
+        scheduleShowWeekend: document.getElementById('scheduleWeekend').checked,
+        scheduleMode: currentScheduleMode,
+        countdowns: currentCountdowns,
+        pickMin: oldCfg.pickMin !== undefined ? oldCfg.pickMin : 1,
+        pickMax: oldCfg.pickMax !== undefined ? oldCfg.pickMax : 50,
+        pickCount: oldCfg.pickCount !== undefined ? oldCfg.pickCount : 1,
+        pickUnique: oldCfg.pickUnique !== undefined ? oldCfg.pickUnique : true,
+        pickSound: oldCfg.pickSound !== undefined ? oldCfg.pickSound : true
+      }
+      var autoLaunch = document.getElementById('autoLaunch').checked
+      window.api.setAutoLaunch(autoLaunch)
+      window.api.saveConfig(config).then(function () {
+        // 倒计时窗口需要单独触发刷新（save-config 不会重建倒计时窗口）
+        window.api.saveCountdown(currentCountdowns).then(function () { showToast() })
+      })
+    })
+  })
+
+  // ===== 修改密码 =====
+  document.getElementById('btnChangePwd').addEventListener('click', function () {
+    var msgEl = document.getElementById('pwdMsg')
+    var oldPwd = document.getElementById('oldPwd').value.trim()
+    var newPwd = document.getElementById('newPwd').value.trim()
+    var confirmPwd = document.getElementById('confirmPwd').value.trim()
+    var hint = document.getElementById('pwdHint').value.trim()
+
+    if (!oldPwd) { msgEl.textContent = '请输入当前密码'; msgEl.className = 'pwd-msg error'; return }
+    if (!newPwd) { msgEl.textContent = '请输入新密码'; msgEl.className = 'pwd-msg error'; return }
+    if (newPwd.length < 4) { msgEl.textContent = '新密码至少4位'; msgEl.className = 'pwd-msg error'; return }
+    if (newPwd !== confirmPwd) { msgEl.textContent = '两次输入的新密码不一致'; msgEl.className = 'pwd-msg error'; return }
+
+    window.api.changePassword(oldPwd, newPwd, hint).then(function (result) {
+      if (result.ok) {
+        msgEl.textContent = result.msg
+        msgEl.className = 'pwd-msg success'
+        document.getElementById('oldPwd').value = ''
+        document.getElementById('newPwd').value = ''
+        document.getElementById('confirmPwd').value = ''
+        document.getElementById('pwdHint').value = ''
+      } else {
+        msgEl.textContent = result.msg
+        msgEl.className = 'pwd-msg error'
+      }
+    })
+  })
+
+  document.getElementById('btnClose').addEventListener('click', function () {
+    if (window.api && window.api.closeSettings) {
+      window.api.closeSettings()
+    } else if (window.api && window.api.closeWindow) {
+      window.api.closeWindow()
+    }
+  })
+
+  load()
+</script>
+</body>
+</html>

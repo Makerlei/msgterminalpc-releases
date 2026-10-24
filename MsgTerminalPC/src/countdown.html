@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: transparent;
+    font-family: 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 挂件不吃鼠标事件，桌面图标点击/框选不受影响 */
+  }
+  .cd-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cd-card {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 34px 16px;
+    border-radius: 18px;
+    /* 与时钟/课程表一致的毛玻璃背景 */
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.04);
+  }
+  .cd-name {
+    text-align: center;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      1px 1px 0 rgba(255,255,255,0.85),
+      -1px -1px 0 rgba(255,255,255,0.85),
+      1px -1px 0 rgba(255,255,255,0.85),
+      -1px 1px 0 rgba(255,255,255,0.85);
+  }
+  .cd-days {
+    font-family: 'Segoe UI', 'Microsoft YaHei', monospace;
+    font-size: 90px;
+    font-weight: 800;
+    line-height: 1.05;
+    text-align: center;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.55);
+    text-shadow:
+      0 0 4px rgba(255,255,255,0.85),
+      0 0 8px rgba(255,255,255,0.45),
+      0 2px 4px rgba(0,0,0,0.06);
+  }
+  .cd-unit {
+    font-size: 21px;
+    font-weight: 700;
+    color: #475569;
+    margin-left: 4px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 2px rgba(255,255,255,0.9);
+  }
+  .cd-sub {
+    font-size: 19px;
+    color: #64748b;
+    letter-spacing: 1px;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow:
+      0 0 2px rgba(255,255,255,0.9),
+      1px 1px 0 rgba(255,255,255,0.8),
+      -1px -1px 0 rgba(255,255,255,0.8);
+  }
+  .cd-empty {
+    font-size: 16px;
+    color: #64748b;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="cd-wrap">
+  <div class="cd-card" id="cdCard"></div>
+</div>
+
+<script>
+  var WEEK = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六']
+
+  function pad(n) { return n < 10 ? '0' + n : String(n) }
+
+  // 当前窗口要展示的倒计时序号（来自 ?i=），多条倒计时各自独立窗口
+  function myIndex() {
+    try {
+      var q = new URLSearchParams(window.location.search)
+      var i = parseInt(q.get('i'), 10)
+      return isNaN(i) ? 0 : i
+    } catch (e) { return 0 }
+  }
+
+  // 计算距目标日期还有几天（按自然日算，今天 0 点为基准）
+  function resolve(item) {
+    var now = new Date()
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    var target
+    if (item.autoYear) {
+      var m = parseInt(item.month, 10) || 1
+      var d = parseInt(item.day, 10) || 1
+      var y = now.getFullYear()
+      target = new Date(y, m - 1, d)
+      if (target.getTime() < today.getTime()) target = new Date(y + 1, m - 1, d)
+    } else {
+      var y = parseInt(item.year, 10)
+      if (!y) return null
+      target = new Date(y, (parseInt(item.month, 10) || 1) - 1, parseInt(item.day, 10) || 1)
+    }
+    if (isNaN(target.getTime())) return null
+    var days = Math.round((target.getTime() - today.getTime()) / 86400000)
+    return { days: days, target: target }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    })
+  }
+
+  function itemHtml(it) {
+    var r = resolve(it)
+    if (!r) return '<div class="cd-empty">无效的日期</div>'
+    var sub = r.target.getFullYear() + '年' + (r.target.getMonth() + 1) + '月' + r.target.getDate() + '日'
+    sub += '　' + WEEK[r.target.getDay()]
+    var txt = r.days > 0 ? r.days : (r.days === 0 ? '今天' : Math.abs(r.days))
+    var unit = r.days === 0 ? '' : '<span class="cd-unit">天</span>'
+    var label = '距 ' + esc(it.name) + (r.days >= 0 ? ' 还有' : ' 已过')
+    return '<div class="cd-name">' + label + '</div>'
+      + '<div class="cd-days" style="color:' + esc(it.color || '#0f172a') + '">' + txt + unit + '</div>'
+      + '<div class="cd-sub">' + sub + '</div>'
+  }
+
+  function render() {
+    var card = document.getElementById('cdCard')
+    if (!window.api || !window.api.getConfig) { card.innerHTML = '<div class="cd-empty">加载中…</div>'; return }
+    window.api.getConfig().then(function (cfg) {
+      var list = (cfg && Array.isArray(cfg.countdowns)) ? cfg.countdowns : []
+      list = list.filter(function (it) { return it && it.enabled !== false })
+      var idx = myIndex()
+      var it = list[idx]
+      if (!it) { card.innerHTML = '<div class="cd-empty">暂无倒计时</div>'; return }
+      card.innerHTML = itemHtml(it)
+    }).catch(function () { card.innerHTML = '<div class="cd-empty">加载失败</div>' })
+  }
+
+  render()
+
+  // 每分钟轻量刷新天数/日期（跨天自动更新），不整卡重绘
+  function refreshDays() {
+    var card = document.getElementById('cdCard')
+    var daysEl = card.querySelector('.cd-days')
+    var subEl = card.querySelector('.cd-sub')
+    if (!daysEl || !subEl) return
+    if (!window.api || !window.api.getConfig) return
+    window.api.getConfig().then(function (cfg) {
+      var list = (cfg && Array.isArray(cfg.countdowns)) ? cfg.countdowns : []
+      list = list.filter(function (it) { return it && it.enabled !== false })
+      var it = list[myIndex()]
+      if (!it) return
+      var r = resolve(it)
+      if (!r) return
+      var sub = r.target.getFullYear() + '年' + (r.target.getMonth() + 1) + '月' + r.target.getDate() + '日'
+      sub += '　' + WEEK[r.target.getDay()]
+      var txt = r.days > 0 ? r.days : (r.days === 0 ? '今天' : Math.abs(r.days))
+      var unit = r.days === 0 ? '' : '<span class="cd-unit">天</span>'
+      daysEl.innerHTML = txt + unit
+      subEl.textContent = sub
+    }).catch(function () {})
+  }
+
+  setInterval(refreshDays, 60000)
+
+  if (window.api && window.api.onCountdownRefresh) {
+    window.api.onCountdownRefresh(function () { render() })
+  }
+</script>
+</body>
+</html>
